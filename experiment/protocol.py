@@ -8,7 +8,7 @@ from unquad.estimator.conformal import ConformalEstimator
 from experiment.setup import Setup
 
 
-class Experiment:
+class Protocol:
     def __init__(self, setup: Setup, debug: bool = False):
 
         self.setup = setup
@@ -37,6 +37,7 @@ class Experiment:
         )
 
         train.drop(["Class"], axis=1, inplace=True)
+
         estimator.fit(train)
 
         if self.debug:

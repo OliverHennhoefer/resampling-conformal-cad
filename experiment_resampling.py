@@ -1,34 +1,25 @@
 from pathlib import Path
-import random
 from sys import float_info
 
-import numpy
+import random
 import warnings
 import functools
 import multiprocessing
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from pyod.models.gmm import GMM
-from pyod.models.pca import PCA
 from tqdm import tqdm
-from fastdist import fastdist
 
 from pyod.models.iforest import IForest
 from pyod.models.lof import LOF
-from pyod.models.abod import ABOD
-from pyod.models.ocsvm import OCSVM
+from pyod.models.pca import PCA
 
 from data.dataset import Dataset
 from data.data_loader import DataLoader
 
 from unquad.enums.method import Method
-from unquad.enums.adjustment import Adjustment
-from unquad.estimator.conformal import ConformalEstimator
-from unquad.estimator.split_config.bootstrap_config import BootstrapConfiguration
 
-from experiment.experiment import Experiment
+from experiment.protocol import Protocol
 from experiment.setup import Setup
 
 warnings.filterwarnings(
@@ -38,6 +29,8 @@ warnings.filterwarnings(
 )
 
 if __name__ == "__main__":
+    random.seed(0)
+    np.random.seed(0)
 
     FDR_FILE_PATH = Path("resources/output/fdr.csv")
     POWER_FILE_PATH = Path("resources/output/power.csv")
@@ -50,21 +43,21 @@ if __name__ == "__main__":
         #Dataset.MUSK,
         #Dataset.PIMA,
         #Dataset.ANNTHYROID,
-        #Dataset.MAMMOGRAPHY,
+        Dataset.MAMMOGRAPHY,
         #Dataset.SHUTTLE,
-        Dataset.FRAUD
+        #Dataset.FRAUD
     ]
 
     methods = [
-        Method.SPLIT_CONFORMAL,
+        #Method.SPLIT_CONFORMAL,
         #Method.JACKKNIFE,
         #Method.JACKKNIFE_PLUS,
-        Method.CV,
+        #Method.CV,
         Method.CV_PLUS,
     ]
 
     models = [
-        IForest(behaviour="new", contamination=float_info.min),
+        #IForest(behaviour="new", contamination=float_info.min),
         #LOF(contamination=float_info.min),
         PCA(n_components=3, contamination=float_info.min),
     ]
@@ -111,7 +104,7 @@ if __name__ == "__main__":
                 )
 
                 j = range(J)
-                experiment = Experiment(setup=setup, debug=False)
+                experiment = Protocol(setup=setup, debug=False)
                 func = functools.partial(experiment.start)
                 with multiprocessing.Pool(10) as pool:
                     result = list(tqdm(pool.imap_unordered(func, j), total=J))
