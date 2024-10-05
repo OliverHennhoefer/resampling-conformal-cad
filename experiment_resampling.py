@@ -13,6 +13,7 @@ from tqdm import tqdm
 from pyod.models.iforest import IForest
 from pyod.models.lof import LOF
 from pyod.models.pca import PCA
+from unquad.estimator.split_configuration import SplitConfiguration
 
 from data.dataset import Dataset
 from data.data_loader import DataLoader
@@ -29,50 +30,51 @@ warnings.filterwarnings(
 )
 
 if __name__ == "__main__":
-    random.seed(0)
-    np.random.seed(0)
+    random.seed(1)
+    np.random.seed(1)
 
-    FDR_FILE_PATH = Path("resources/output/fdr.csv")
-    POWER_FILE_PATH = Path("resources/output/power.csv")
+    FDR_FILE_PATH = Path("resources/output/fdr_1.csv")
+    POWER_FILE_PATH = Path("resources/output/power_1.csv")
 
     datasets = [
-        #Dataset.WINE,
-        #Dataset.WBC,
-        #Dataset.IONOSPHERE,
-        #Dataset.BREASTW,
-        #Dataset.MUSK,
-        #Dataset.PIMA,
-        #Dataset.ANNTHYROID,
+        Dataset.WINE,
+        Dataset.WBC,
+        Dataset.IONOSPHERE,
+        Dataset.BREASTW,
+        Dataset.MUSK,
+        Dataset.PIMA,
+        Dataset.ANNTHYROID,
         Dataset.MAMMOGRAPHY,
-        #Dataset.SHUTTLE,
-        #Dataset.FRAUD
+        Dataset.SHUTTLE,
+        Dataset.FRAUD
     ]
 
     methods = [
-        #Method.SPLIT_CONFORMAL,
-        #Method.JACKKNIFE,
-        #Method.JACKKNIFE_PLUS,
-        #Method.CV,
+        Method.SPLIT_CONFORMAL,
+        Method.JACKKNIFE,
+        Method.JACKKNIFE_PLUS,
+        Method.CV,
         Method.CV_PLUS,
     ]
 
     models = [
-        #IForest(behaviour="new", contamination=float_info.min),
+        IForest(behaviour="new", contamination=float_info.min),
         #LOF(contamination=float_info.min),
-        PCA(n_components=3, contamination=float_info.min),
+        #PCA(n_components=3, contamination=float_info.min),
     ]
 
     L, J = 100, 100
     fdr_list, power_list = [], []
 
     for dataset in datasets:
-
         dl = DataLoader(dataset=dataset)
         df = dl.df
 
         for method in methods:
-
-            if method in [Method.JACKKNIFE, Method.JACKKNIFE_PLUS] and dl.num_rows > 1_000:
+            if (
+                method in [Method.JACKKNIFE, Method.JACKKNIFE_PLUS]
+                and dl.num_rows > 1_000
+            ):
                 print(f"Skipping 'Jackknife' for {dataset.value} due to row count.")
                 continue
 
@@ -87,6 +89,12 @@ if __name__ == "__main__":
             n_test_inlier = n_test - n_test_outlier
 
             for model in models:
+                if method in [Method.SPLIT_CONFORMAL]:
+                    sc = SplitConfiguration(n_split=n_cal)
+                elif method in [Method.CV, Method.CV_PLUS]:
+                    sc = SplitConfiguration(n_split=10)
+                else:
+                    sc = None
 
                 print(f"{dataset.value} | {method.value} | {model.__class__.__name__}")
 
@@ -101,6 +109,7 @@ if __name__ == "__main__":
                     n_train_cal=n_train_cal,
                     n_cal=10 if method in [Method.CV, Method.CV_PLUS] else n_cal,
                     L=L,
+                    bootstrap=sc,
                 )
 
                 j = range(J)
@@ -120,7 +129,7 @@ if __name__ == "__main__":
                     "mean": [np.round(np.mean(fdr), 3)],
                     "q90": [np.round(np.quantile(fdr, 0.9), 3)],
                     "std": [np.round(np.std(fdr), 3)],
-                    "raw": [fdr]
+                    "raw": [fdr],
                 }
                 fdr_df = pd.DataFrame(data=fdr_df)
 
@@ -137,7 +146,7 @@ if __name__ == "__main__":
                     "mean": [np.round(np.mean(power), 3)],
                     "q90": [np.round(np.quantile(power, 0.9), 3)],
                     "std": [np.round(np.std(power), 3)],
-                    "raw": [power]
+                    "raw": [power],
                 }
                 power_df = pd.DataFrame(data=power_df)
 

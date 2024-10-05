@@ -13,11 +13,11 @@ from tqdm import tqdm
 from pyod.models.iforest import IForest
 from pyod.models.lof import LOF
 from pyod.models.pca import PCA
+from unquad.estimator.split_configuration import SplitConfiguration
 
 from data.dataset import Dataset
 from data.data_loader import DataLoader
 
-from unquad.estimator.split_config.bootstrap_config import BootstrapConfiguration
 from unquad.enums.method import Method
 from experiment.protocol import Protocol
 from experiment.setup import Setup
@@ -44,31 +44,26 @@ if __name__ == "__main__":
         Dataset.MUSK,
         Dataset.ANNTHYROID,
         Dataset.MAMMOGRAPHY,
-        #Dataset.SHUTTLE,
-        #Dataset.FRAUD
+        Dataset.SHUTTLE,
+        Dataset.FRAUD
     ]
 
-    methods = [
-        Method.JACKKNIFE_AFTER_BOOTSTRAP,
-        Method.JACKKNIFE_PLUS_AFTER_BOOTSTRAP
-    ]
+    methods = [Method.JACKKNIFE_AFTER_BOOTSTRAP, Method.JACKKNIFE_PLUS_AFTER_BOOTSTRAP]
 
     models = [
-        #IForest(behaviour="new", contamination=float_info.min),
-        #LOF(contamination=float_info.min),
-        PCA(n_components=2, contamination=float_info.min),
+        # IForest(behaviour="new", contamination=float_info.min),
+        # LOF(contamination=float_info.min),
+        PCA(n_components=3, contamination=float_info.min),
     ]
 
     L, J = 100, 100
     fdr_list, power_list = [], []
 
     for dataset in datasets:
-
         dl = DataLoader(dataset=dataset)
         df = dl.df
 
         for method in methods:
-
             inliers = df.loc[df.Class == 0]
             outliers = df.loc[df.Class == 1]
 
@@ -80,12 +75,12 @@ if __name__ == "__main__":
             n_test_inlier = n_test - n_test_outlier
 
             for model in models:
-
                 for sample_size in range(100, 1_100, 100):
+                    sc = SplitConfiguration(n_split=0.95, n_calib=sample_size)
 
-                    bc = BootstrapConfiguration(n=n_train_cal, m=0.025, c=sample_size, enforce_c=True)
-
-                    print(f"{dataset.value} | {method.value} | {model.__class__.__name__}")
+                    print(
+                        f"{dataset.value} | {method.value} | {model.__class__.__name__}"
+                    )
 
                     setup = Setup(
                         model=model,
@@ -98,7 +93,7 @@ if __name__ == "__main__":
                         n_train_cal=n_train_cal,
                         n_cal=10 if method in [Method.CV, Method.CV_PLUS] else n_cal,
                         L=L,
-                        bootstrap=bc
+                        bootstrap=sc,
                     )
 
                     j = range(J)
@@ -119,7 +114,7 @@ if __name__ == "__main__":
                         "mean": [np.round(np.mean(fdr), 3)],
                         "q90": [np.round(np.quantile(fdr, 0.9), 3)],
                         "std": [np.round(np.std(fdr), 3)],
-                        "raw": [fdr]
+                        "raw": [fdr],
                     }
                     fdr_df = pd.DataFrame(data=fdr_df)
 
@@ -137,7 +132,7 @@ if __name__ == "__main__":
                         "mean": [np.round(np.mean(power), 3)],
                         "q90": [np.round(np.quantile(power, 0.9), 3)],
                         "std": [np.round(np.std(power), 3)],
-                        "raw": [power]
+                        "raw": [power],
                     }
                     power_df = pd.DataFrame(data=power_df)
 

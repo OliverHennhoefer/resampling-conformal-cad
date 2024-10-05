@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from pandas import DataFrame
 from unquad.enums.method import Method
 from pyod.models.base import BaseDetector
-from unquad.estimator.split_config.bootstrap_config import BootstrapConfiguration
+from unquad.estimator.split_configuration import SplitConfiguration
 
 
 @dataclass
 class Setup:
-
     model: BaseDetector
     method: Method
 
@@ -23,4 +22,4 @@ class Setup:
 
     L: int
 
-    bootstrap: BootstrapConfiguration = None
+    bootstrap: SplitConfiguration = None
